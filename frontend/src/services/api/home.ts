@@ -164,6 +164,24 @@ export const getActiveSessions = async () => {
   }
 }
 
+export const logout = async () => {
+  try {
+    const response = await axiosInstance.post(`${API_URL}/api/logout/`);
+    return {
+      success: true,
+      data: response.data,
+    }
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  catch (error: any) {
+    console.log(error);
+    return {
+      success: false,
+      message: Object.values(error.response.data)[0],
+    };
+  }
+} 
+
 export const logoutAll = async () => {
   try {
     const response = await axiosInstance.post(`${API_URL}/api/logout/all/`);

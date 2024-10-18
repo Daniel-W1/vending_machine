@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Loader2 } from "lucide-react"
 import { login, signup } from "@/services/api/auth"
 import { useNavigate } from "react-router-dom"
-import { useToast } from "@/hooks/use-toast"
+import { useToast } from "@/hooks/useToast"
 
 export default function AuthScreen() {
   const [loginData, setLoginData] = useState({
