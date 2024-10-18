@@ -82,10 +82,7 @@ export function SellerPanel({
             </div>
           </div>
           <Button
-            onClick={() => {
-              onAddProduct();
-              setAddModalOpen(false);
-            }}
+            onClick={onAddProduct}
             className="w-full bg-green-500 hover:bg-green-600 text-white"
             disabled={isAdding}
           >
@@ -132,10 +129,7 @@ export function SellerPanel({
             </div>
           </div>
           <Button
-            onClick={() => {
-              onUpdateProduct();
-              setEditModalOpen(false);
-            }}
+            onClick={onUpdateProduct}
             className="w-full bg-green-500 hover:bg-green-600 text-white"
             disabled={isUpdating}
           >

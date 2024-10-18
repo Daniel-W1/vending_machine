@@ -11,7 +11,7 @@ from decimal import Decimal
 from django.core.cache import cache
 from django.conf import settings
 
-class UserView(APIView):
+class UserRegistrationAndListView(APIView):
     def post(self, request):
         serializer = UserSerializer(data=request.data)
         if serializer.is_valid():
@@ -29,7 +29,7 @@ class UserView(APIView):
         serializer = UserSerializer(users, many=True)
         return Response(serializer.data)
 
-class DepositView(APIView):
+class UserDepositView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -46,16 +46,13 @@ class DepositView(APIView):
             return Response({'message': 'Deposit successful'}, status=status.HTTP_200_OK)
         return Response({'error': 'Amount is required'}, status=status.HTTP_400_BAD_REQUEST)
     
-class BuyView(APIView):
+class ProductPurchaseView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
         user = request.user
         product_id = request.data.get('product_id')
         quantity = request.data.get('quantity')
-
-        print('product id', product_id)
-        print('quantity', quantity)
 
         if product_id and quantity:
             product = Product.objects.get(id=product_id)
@@ -65,9 +62,6 @@ class BuyView(APIView):
                 return Response({'error': 'Insufficient stock'}, status=status.HTTP_400_BAD_REQUEST)
 
             custom_user = user.customuser
-
-            print('custom user deposit', custom_user.deposit)
-            print('total price', total_price)
 
             if custom_user.deposit >= total_price:
                 custom_user.deposit -= total_price
@@ -82,7 +76,7 @@ class BuyView(APIView):
 
         return Response({'error': 'Product ID and quantity are required'}, status=status.HTTP_400_BAD_REQUEST)
 
-class ResetDepositView(APIView):
+class UserDepositResetView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -93,7 +87,7 @@ class ResetDepositView(APIView):
         return Response({'message': 'Deposit reset successfully'}, status=status.HTTP_200_OK)
 
 
-class UserDetailView(APIView):
+class UserDetailManagementView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, id):
@@ -130,7 +124,7 @@ class UserDetailView(APIView):
         except User.DoesNotExist:
             return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
 
-class SignInView(APIView):
+class UserAuthenticationView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
@@ -161,7 +155,7 @@ class SignInView(APIView):
         except User.DoesNotExist:
             return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
 
-class GetActiveSessionsView(APIView):
+class ActiveSessionsCountView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -169,7 +163,7 @@ class GetActiveSessionsView(APIView):
         active_sessions = cache.get(f'active_sessions_{user_id}', [])
         return Response({'active_sessions': len(active_sessions)}, status=status.HTTP_200_OK)
 
-class RefreshTokenView(APIView):
+class TokenRefreshView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
@@ -187,9 +181,7 @@ class RefreshTokenView(APIView):
         except TokenError:
             return Response({'error': 'Invalid or expired refresh token'}, status=status.HTTP_401_UNAUTHORIZED)
 
-
-
-class LogoutView(APIView):
+class UserLogoutView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -207,7 +199,7 @@ class LogoutView(APIView):
         
         return Response('Logged out successfully', status=status.HTTP_200_OK)
 
-class LogoutAllView(APIView):
+class UserLogoutAllView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -224,7 +216,7 @@ class LogoutAllView(APIView):
 
         return Response('All sessions logged out successfully', status=status.HTTP_200_OK)
 
-class ProductGetView(APIView):
+class ProductListView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
@@ -232,26 +224,21 @@ class ProductGetView(APIView):
         serializer = ProductSerializer(products, many=True)
         return Response(serializer.data)
 
-class ProductView(APIView):
+class ProductCreationView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
         serializer = ProductSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save(seller_id=request.user)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        
-        print(serializer.errors, 'errors while creating product')
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-class ProductDetailView(APIView):
-    def get(self, request, id):
         try:
-            product = Product.objects.get(id=id)
-            serializer = ProductSerializer(product)
-            return Response(serializer.data)
-        except Product.DoesNotExist:
-            return Response({'error': 'Product not found'}, status=status.HTTP_404_NOT_FOUND)
+            if serializer.is_valid():
+                serializer.save(seller_id=request.user)
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            print(e)
+            return Response({'error': list(dict(e).values())[0]}, status=status.HTTP_400_BAD_REQUEST)
+
+class ProductUpdateDeleteView(APIView):
+    permission_classes = [IsAuthenticated]
 
     def put(self, request, id):
         try:
@@ -263,10 +250,13 @@ class ProductDetailView(APIView):
         update_data = {key: value for key, value in request.data.items() if key in allowed_fields}
 
         serializer = ProductSerializer(product, data=update_data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data)
+        except Exception as e:
+            print(e)
+            return Response({'error': list(dict(e).values())[0]}, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, id):
         try:

@@ -268,7 +268,7 @@ export function useVendingMachine() {
                 const response = await api.getActiveSessions();
                 if (response.success) {
                     const sessionsCount = parseInt(response.data.active_sessions);
-                    if (sessionsCount > 1 && !localStorage.getItem('notified')) {
+                    if (sessionsCount > 0 && !localStorage.getItem('notified')) {
                         setShowAlert(true);
                     }
                 }
