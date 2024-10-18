@@ -167,7 +167,7 @@ export default function AuthScreen() {
         <div className="bg-gray-100 p-4">
           <div className="text-center text-sm text-gray-600">
             <p>Choose your favorite digital snacks and drinks!</p>
-            <p className="mt-2">© 2023 Virtual Vend. All rights reserved.</p>
+            <p className="mt-2">© 2024 Virtual Vend. All rights reserved.</p>
           </div>
         </div>
       </div>
