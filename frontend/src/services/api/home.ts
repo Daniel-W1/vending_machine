@@ -166,7 +166,7 @@ export const getActiveSessions = async () => {
 
 export const logout = async () => {
   try {
-    const response = await axiosInstance.post(`${API_URL}/api/logout/`);
+    const response = await axiosInstance.post(`${API_URL}/api/logout/`, { refresh_token: localStorage.getItem('refresh') });
     return {
       success: true,
       data: response.data,

@@ -23,6 +23,7 @@ def check_product_owner(get_response):
 
                 try:
                     request_user_id = get_user_from_token(request.headers.get('Authorization', '').split(' ')[1])
+                    print('token', request.headers.get('Authorization', '').split(' ')[1])
                 except Exception as e:
                     print(e, 'the error in check product owner')
                     return JsonResponse(

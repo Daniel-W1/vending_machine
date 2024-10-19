@@ -10,8 +10,11 @@ from rest_framework_simplejwt.exceptions import TokenError
 from decimal import Decimal
 from django.core.cache import cache
 from django.conf import settings
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample
+from drf_spectacular.types import OpenApiTypes
 
 class UserRegistrationAndListView(APIView):
+    @extend_schema(request=UserSerializer, responses={201: UserSerializer})
     def post(self, request):
         serializer = UserSerializer(data=request.data)
         try:
@@ -36,6 +39,22 @@ class UserRegistrationAndListView(APIView):
 class UserDepositView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        request=OpenApiTypes.OBJECT,
+        responses={200: OpenApiTypes.OBJECT},
+        examples=[
+            OpenApiExample(
+                'Deposit Request',
+                value={'amount': '0.50'},
+                request_only=True,
+            ),
+            OpenApiExample(
+                'Deposit Response',
+                value={'message': 'Deposit successful'},
+                response_only=True,
+            ),
+        ],
+    )
     def post(self, request):
         user = request.user
         amount = request.data.get('amount')
@@ -58,6 +77,22 @@ class UserDepositView(APIView):
 class ProductPurchaseView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        request=OpenApiTypes.OBJECT,
+        responses={200: OpenApiTypes.OBJECT},
+        examples=[
+            OpenApiExample(
+                'Purchase Request',
+                value={'product_id': 1, 'quantity': 2},
+                request_only=True,
+            ),
+            OpenApiExample(
+                'Purchase Response',
+                value={'total_price': '2.00', 'product_name': 'Sample Product', 'change': '3.00'},
+                response_only=True,
+            ),
+        ],
+    )
     def post(self, request):
         user = request.user
         quantity = int(request.data.get('quantity'))
@@ -92,6 +127,16 @@ class ProductPurchaseView(APIView):
 class UserDepositResetView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        responses={200: OpenApiTypes.OBJECT},
+        examples=[
+            OpenApiExample(
+                'Reset Response',
+                value={'message': 'Deposit reset successfully'},
+                response_only=True,
+            ),
+        ],
+    )
     def post(self, request):
         user = request.user
         custom_user = user.customuser
@@ -103,6 +148,7 @@ class UserDepositResetView(APIView):
 class UserDetailManagementView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(responses={200: UserSerializer})
     def get(self, request, id):
         try:
             user = User.objects.get(id=id)
@@ -111,6 +157,7 @@ class UserDetailManagementView(APIView):
         except User.DoesNotExist:
             return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
 
+    @extend_schema(request=UserSerializer, responses={200: UserSerializer})
     def put(self, request, id):
         try:
             user = User.objects.get(id=id)
@@ -132,6 +179,7 @@ class UserDetailManagementView(APIView):
             print(e)
             return Response({'error': list(dict(e).values())[0]}, status=status.HTTP_400_BAD_REQUEST)
 
+    @extend_schema(responses={204: None})
     def delete(self, request, id):
         try:
             user = User.objects.get(id=id)
@@ -143,6 +191,22 @@ class UserDetailManagementView(APIView):
 class UserAuthenticationView(APIView):
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        request=OpenApiTypes.OBJECT,
+        responses={200: OpenApiTypes.OBJECT},
+        examples=[
+            OpenApiExample(
+                'Authentication Request',
+                value={'username': 'user123', 'password': 'password123'},
+                request_only=True,
+            ),
+            OpenApiExample(
+                'Authentication Response',
+                value={'refresh': 'refresh_token', 'access': 'access_token', 'user': {'id': 1, 'username': 'user123', 'role': 'buyer', 'deposit': 0}},
+                response_only=True,
+            ),
+        ],
+    )
     def post(self, request):
         username = request.data.get('username')
         password = request.data.get('password')
@@ -158,7 +222,7 @@ class UserAuthenticationView(APIView):
                 refresh = RefreshToken.for_user(user)
                 access_token = refresh.access_token
 
-                active_sessions.append(access_token)
+                active_sessions.append(str(refresh))
                 cache.set(f'active_sessions_{user.id}', active_sessions, timeout=settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'].total_seconds())
 
                 return Response({
@@ -174,6 +238,16 @@ class UserAuthenticationView(APIView):
 class ActiveSessionsCountView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        responses={200: OpenApiTypes.OBJECT},
+        examples=[
+            OpenApiExample(
+                'Active Sessions Response',
+                value={'active_sessions': 2},
+                response_only=True,
+            ),
+        ],
+    )
     def get(self, request):
         user_id = request.user.id
         active_sessions = cache.get(f'active_sessions_{user_id}', [])
@@ -182,6 +256,22 @@ class ActiveSessionsCountView(APIView):
 class TokenRefreshView(APIView):
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        request=OpenApiTypes.OBJECT,
+        responses={200: OpenApiTypes.OBJECT},
+        examples=[
+            OpenApiExample(
+                'Refresh Request',
+                value={'refresh': 'refresh_token'},
+                request_only=True,
+            ),
+            OpenApiExample(
+                'Refresh Response',
+                value={'access': 'new_access_token'},
+                response_only=True,
+            ),
+        ],
+    )
     def post(self, request):
         refresh_token = request.data.get('refresh')
         if not refresh_token:
@@ -200,6 +290,22 @@ class TokenRefreshView(APIView):
 class UserLogoutView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        request=OpenApiTypes.OBJECT,
+        responses={200: OpenApiTypes.STR},
+        examples=[
+            OpenApiExample(
+                'Logout Request',
+                value={'refresh_token': 'refresh_token'},
+                request_only=True,
+            ),
+            OpenApiExample(
+                'Logout Response',
+                value='Logged out successfully',
+                response_only=True,
+            ),
+        ],
+    )
     def post(self, request):
         refresh_token = request.data.get('refresh_token')
         token = RefreshToken(refresh_token)
@@ -218,6 +324,16 @@ class UserLogoutView(APIView):
 class UserLogoutAllView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        responses={200: OpenApiTypes.STR},
+        examples=[
+            OpenApiExample(
+                'Logout All Response',
+                value='All sessions logged out successfully',
+                response_only=True,
+            ),
+        ],
+    )
     def post(self, request):
         user_id = request.user.id
         active_sessions = cache.get(f'active_sessions_{user_id}', [])
@@ -235,6 +351,7 @@ class UserLogoutAllView(APIView):
 class ProductListView(APIView):
     permission_classes = [AllowAny]
 
+    @extend_schema(responses={200: ProductSerializer(many=True)})
     def get(self, request):
         products = Product.objects.all()
         serializer = ProductSerializer(products, many=True)
@@ -243,6 +360,7 @@ class ProductListView(APIView):
 class ProductCreationView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(request=ProductSerializer, responses={201: ProductSerializer})
     def post(self, request):
         serializer = ProductSerializer(data=request.data)
         try:
@@ -258,6 +376,7 @@ class ProductCreationView(APIView):
 class ProductUpdateDeleteView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(request=ProductSerializer, responses={200: ProductSerializer})
     def put(self, request, id):
         try:
             product = Product.objects.get(id=id)
@@ -276,6 +395,7 @@ class ProductUpdateDeleteView(APIView):
             print(e)
             return Response({'error': list(dict(e).values())[0]}, status=status.HTTP_400_BAD_REQUEST)
 
+    @extend_schema(responses={204: None})
     def delete(self, request, id):
         try:
             product = Product.objects.get(id=id)

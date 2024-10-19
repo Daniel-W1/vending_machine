@@ -27,8 +27,8 @@ class Product(models.Model):
     id = models.AutoField(primary_key=True)
     product_name = models.CharField(max_length=30)
     seller_id = models.ForeignKey(User, on_delete=models.CASCADE, related_name='products')
-    amount_available = models.PositiveIntegerField(default=0)
-    cost = models.DecimalField(default=0, max_digits=10, decimal_places=2)
+    amount_available = models.PositiveIntegerField()
+    cost = models.DecimalField(max_digits=10, decimal_places=2)
 
     def clean(self):
         if self.cost*100 % 5 != 0:
