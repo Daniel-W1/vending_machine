@@ -14,15 +14,19 @@ from django.conf import settings
 class UserRegistrationAndListView(APIView):
     def post(self, request):
         serializer = UserSerializer(data=request.data)
-        if serializer.is_valid():
-            if User.objects.filter(username=request.data.get('username')).exists():
-                return Response({'error': 'Username already exists'}, status=status.HTTP_400_BAD_REQUEST)
-            
-            serializer.validated_data['password'] = make_password(serializer.validated_data['password'])
-            serializer.save()
+        try:
+            if serializer.is_valid():
+                if User.objects.filter(username=request.data.get('username')).exists():
+                    return Response({'error': 'Username already exists'}, status=status.HTTP_400_BAD_REQUEST)
+                
+                serializer.validated_data['password'] = make_password(serializer.validated_data['password'])
+                serializer.save()
 
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({'error': list(dict(e).values())[0]}, status=status.HTTP_400_BAD_REQUEST)
 
     def get(self, request):
         users = User.objects.all()
@@ -38,6 +42,11 @@ class UserDepositView(APIView):
 
         if amount:
             custom_user = user.customuser
+            amount = Decimal(amount)
+
+            valid_coins = [Decimal('0.05'), Decimal('0.10'), Decimal('0.20'), Decimal('0.50'), Decimal('1.00')]
+            if amount not in valid_coins:
+                return Response({'error': 'Invalid coin value. Only 5, 10, 20, 50 cent and 1 euro coins are accepted'}, status=status.HTTP_400_BAD_REQUEST)
 
             custom_user.deposit += Decimal(amount)
 
@@ -51,11 +60,15 @@ class ProductPurchaseView(APIView):
 
     def post(self, request):
         user = request.user
+        quantity = int(request.data.get('quantity'))
         product_id = request.data.get('product_id')
-        quantity = request.data.get('quantity')
 
         if product_id and quantity:
-            product = Product.objects.get(id=product_id)
+            try:
+                product = Product.objects.get(id=product_id)
+            except Product.DoesNotExist:
+                return Response({'error': 'Product not found'}, status=status.HTTP_404_NOT_FOUND)
+
             total_price = product.cost * quantity
 
             if product.amount_available < quantity:
@@ -111,10 +124,13 @@ class UserDetailManagementView(APIView):
             update_data['password'] = make_password(update_data['password'])
 
         serializer = UserSerializer(user, data=update_data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data)
+        except Exception as e:
+            print(e)
+            return Response({'error': list(dict(e).values())[0]}, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, id):
         try:
@@ -233,6 +249,8 @@ class ProductCreationView(APIView):
             if serializer.is_valid():
                 serializer.save(seller_id=request.user)
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             print(e)
             return Response({'error': list(dict(e).values())[0]}, status=status.HTTP_400_BAD_REQUEST)

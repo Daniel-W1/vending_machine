@@ -15,6 +15,14 @@ class CustomUser(models.Model):
         default=Role.BUYER
     )
 
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+    
+    def update(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
 class Product(models.Model):
     id = models.AutoField(primary_key=True)
     product_name = models.CharField(max_length=30)
