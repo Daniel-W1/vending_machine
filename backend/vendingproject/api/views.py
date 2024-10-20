@@ -307,19 +307,22 @@ class UserLogoutView(APIView):
         ],
     )
     def post(self, request):
-        refresh_token = request.data.get('refresh_token')
-        token = RefreshToken(refresh_token)
-        token.blacklist()
+        try:    
+            refresh_token = request.data.get('refresh_token')
+            token = RefreshToken(refresh_token)
+            token.blacklist()
 
-        user_id = request.user.id
-        active_sessions = cache.get(f'active_sessions_{user_id}', [])
-        token = request.headers.get('Authorization', '').split(' ')[1]
+            user_id = request.user.id
+            active_sessions = cache.get(f'active_sessions_{user_id}', [])
+            token = request.headers.get('Authorization', '').split(' ')[1]
 
-        if token in active_sessions:
-            active_sessions.remove(token)
-            cache.set(f'active_sessions_{user_id}', active_sessions, timeout=settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'].total_seconds())
-        
-        return Response('Logged out successfully', status=status.HTTP_200_OK)
+            if token in active_sessions:
+                active_sessions.remove(token)
+                cache.set(f'active_sessions_{user_id}', active_sessions, timeout=settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'].total_seconds())
+            
+            return Response('Logged out successfully', status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 class UserLogoutAllView(APIView):
     permission_classes = [IsAuthenticated]

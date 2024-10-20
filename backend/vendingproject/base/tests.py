@@ -5,6 +5,7 @@ from rest_framework.test import APIClient
 from base.models import User, CustomUser, Product
 from decimal import Decimal
 from rest_framework_simplejwt.tokens import RefreshToken
+from django.core.cache import cache
 
 class UserRegistrationAndListViewTests(TestCase):
     def setUp(self):
@@ -105,6 +106,49 @@ class UserAuthenticationViewTests(TestCase):
         response = self.client.post(self.url, data)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertIn('error', response.data)
+
+class UserLogoutViewTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.url = reverse('logout')
+        self.user = User.objects.create_user(username='testuser', password='testpass123')
+        refresh = RefreshToken.for_user(self.user)
+        self.refresh_token = str(refresh)
+        self.access_token = str(refresh.access_token)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.access_token}')
+
+    def test_logout_success(self):
+        data = {'refresh_token': self.refresh_token}
+        response = self.client.post(self.url, data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, 'Logged out successfully')
+
+    def test_logout_invalid_token(self):
+        data = {'refresh_token': 'invalid_token'}
+        response = self.client.post(self.url, data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('error', response.data)
+        self.assertIn('Token is invalid or expired', response.data['error'])
+
+
+class UserLogoutAllViewTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.url = reverse('logout_all')
+        self.user = User.objects.create_user(username='testuser', password='testpass123')
+        refresh = RefreshToken.for_user(self.user)
+        self.access_token = str(refresh.access_token)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.access_token}')
+
+    def test_logout_all_success(self):
+        response = self.client.post(self.url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, 'All sessions logged out successfully')
+
+    def test_logout_all_unauthorized(self):
+        self.client.credentials()  # Remove authorization
+        response = self.client.post(self.url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
 class UserDepositViewTests(TestCase):
     def setUp(self):
