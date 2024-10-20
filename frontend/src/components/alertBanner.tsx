@@ -13,7 +13,7 @@ export function AlertBanner({ show, onLogoutAll, onDismiss }: AlertBannerProps) 
   return (
     <Alert className='absolute z-10 bg-background' variant={'destructive'}>
       <AlertTitle>Heads up!</AlertTitle>
-      <AlertDescription className='flex space-x-2 items-center'>
+      <AlertDescription className='flex space-x-2 items-center flex-wrap'>
         <span>You already have active sessions. If that's not you, please logout quickly!</span>
         <Button onClick={onLogoutAll} variant={'ghost'} className='underline'>Logout from all devices</Button>
         <Button onClick={onDismiss} variant={'ghost'} className='text-green-500 px-2'>It's Ok</Button>
