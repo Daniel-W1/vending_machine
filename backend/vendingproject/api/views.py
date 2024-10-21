@@ -61,7 +61,7 @@ class UserDepositView(APIView):
 
         if amount:
             custom_user = user.customuser
-            amount = Decimal(amount)
+            amount = Decimal(amount).quantize(Decimal('0.01'))
 
             valid_coins = [Decimal('0.05'), Decimal('0.10'), Decimal('0.20'), Decimal('0.50'), Decimal('1.00')]
             if amount not in valid_coins:
@@ -368,6 +368,9 @@ class ProductCreationView(APIView):
         serializer = ProductSerializer(data=request.data)
         try:
             if serializer.is_valid():
+                if request.user.id != serializer.validated_data['seller_id'].id:
+                    return Response({'error': 'You do not have permission to create this product'}, status=status.HTTP_403_FORBIDDEN)
+                
                 serializer.save(seller_id=request.user)
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             else:
